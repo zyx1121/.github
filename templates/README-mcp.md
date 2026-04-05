@@ -32,4 +32,4 @@ claude mcp add {name} -- npx @zyx1121/{name}-mcp
 
 ## License
 
-[MIT](LICENSE.md) — Feel free to enjoy and participate in open source.
+[MIT](LICENSE.md) — {something fun}
