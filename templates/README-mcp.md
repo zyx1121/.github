@@ -1,3 +1,7 @@
+```
+{ANSI Shadow: npx figlet-cli -f "ANSI Shadow" "{NAME}"}
+```
+
 # @zyx1121/{name}-mcp
 
 MCP server for {App Name} — {one-line description} via Claude Code.

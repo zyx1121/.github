@@ -1,3 +1,7 @@
+```
+{ANSI Shadow: npx figlet-cli -f "ANSI Shadow" "{NAME}"}
+```
+
 # {Project Name}
 
 {One-line description.}
