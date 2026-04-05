@@ -26,4 +26,4 @@ KEY=value
 
 ## License
 
-MIT
+[MIT](LICENSE.md) — Feel free to enjoy and participate in open source.
