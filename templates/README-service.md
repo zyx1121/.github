@@ -93,7 +93,7 @@ Every self-hosted service ships the same deploy surface, so this README can stay
 - .env.example with every key, grouped into Docker Compose, every run, and a run from source.
 - CI: typecheck, lint, test, then build the image and run a smoke test against a real `docker compose up`.
 - Release: every push to main publishes :sha-<commit> and :main; a v* tag publishes the SemVer tags and :latest, for amd64 and arm64.
-- The project page on zyx.tw uses the same sections as this README (What it is, What it does, Deploy, Use, Configure), shorter.
+- The project page on zyx.tw uses the same sections as this README, shorter: the story as What it is, then What it does, Deploy, Use and Configure.
 
 A host that runs containers itself (kitbash) or a desktop installer (aias) is the exception: its Deploy section says what to install instead of compose.yaml.
 -->
