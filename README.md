@@ -12,7 +12,7 @@ The page has two readers, so it has two halves:
 |------|--------|----------|
 | Header | both | name, one line, badges, language switch |
 | Human half | people who browse GitHub | demo, a two-sentence pitch, Features, Quick start, Usage, Configuration, How it works |
-| Agent half | coding agents and LLM tools | For AI agents (a fixed YAML block), Development, License |
+| Agent half | coding agents and LLM tools | For AI agents (a fixed list of labeled facts), Development, License |
 
 ### Content
 
@@ -46,7 +46,7 @@ The Chinese translations keep the same rules where they apply: short sentences, 
 
 ### The agent half
 
-- The YAML block keeps the keys and their order from the template, so a tool can read every repo the same way. Write `none` instead of deleting a key.
+- The list keeps the labels and their order from the template. An agent then finds the same fact in the same place in every repo. Write `none` instead of deleting a label.
 - `verify` is a command whose output proves the project works. It is not a description.
 - `secrets` says what is secret and where it lives. It never contains a value.
 - The rules for changing the code (where to build and test, conventions, traps) go in the repo's `AGENTS.md`.

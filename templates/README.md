@@ -62,23 +62,18 @@ flowchart LR
 
 ## For AI agents
 
-Structured facts for coding agents and LLM tools. The rules for changing the code are in [AGENTS.md](AGENTS.md).
+Facts for coding agents and LLM tools. The rules for changing the code are in [AGENTS.md](AGENTS.md).
 
-```yaml
-name: {repo}
-summary: {one sentence}
-type: {service | mcp | plugin | web | app | cli | library | research}
-interfaces:
-  cli: {command, or none}
-  mcp: {server name and transport, or none}
-  http: {base URL, or none}
-install: {one command}
-run: {one command}
-verify: {a command whose output proves it works}
-config: [{ENV_VAR}]
-secrets: [{what is secret and where it lives, never the value}]
-limits: [{a known limit, one line each}]
-```
+<!-- Keep every label and its order. Write "none" when a label does not apply. -->
+- **Summary**: {one sentence}
+- **Type**: {service, mcp, plugin, web, app, cli, library or research}
+- **Interfaces**: {CLI `command`, MCP `name` (stdio), HTTP `base URL`, or none}
+- **Install**: `{one command}`
+- **Run**: `{one command}`
+- **Verify**: `{a command whose output proves it works}`
+- **Config**: {`ENV_VAR` names, or none}
+- **Secrets**: {what is secret and where it lives, never the value, or none}
+- **Limits**: {known limits, one short sentence each}
 
 ## Development
 
@@ -88,7 +83,7 @@ git clone https://github.com/zyx1121/{repo} && cd {repo}
 {test}
 ```
 
-{What CI checks, in one line.}
+{What CI runs, in one line.}
 
 ## License
 

@@ -1,6 +1,6 @@
 # Blocks by project type
 
-[README.md](README.md) is the same for every project. What changes by type is the badge set, Quick start, Usage and the `interfaces` in "For AI agents". Pick one block and paste it over those parts.
+[README.md](README.md) is the same for every project. What changes by type is the badge set, Quick start, Usage and the Interfaces line in "For AI agents". Pick one block and paste it over those parts.
 
 ## service
 
@@ -65,7 +65,7 @@ Any other MCP client:
 | `{tool}` | {one line} | {read / write / destroy} |
 ````
 
-`interfaces.mcp` in the agent block: `{name} (stdio)` or `{url} (streamable HTTP)`.
+In "For AI agents", Interfaces names the server and its transport: MCP `{name}` (stdio) or MCP `{url}` (streamable HTTP).
 
 ## plugin
 
@@ -173,4 +173,4 @@ Badges: none, or a paper link (`[![Paper](https://img.shields.io/badge/paper-PDF
 ```
 ````
 
-In the agent block, `type` is `research`, every `interfaces` key is usually `none`, and `verify` is the reproduce command.
+In "For AI agents", Type is `research`, Interfaces is usually `none`, and Verify is the reproduce command.
