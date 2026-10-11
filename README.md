@@ -57,6 +57,23 @@ The Chinese translations keep the same rules where they apply: short sentences, 
 - Translations cover the human half. The agent half stays in English, and each translation links to it. Line 1 of a translation records the `README.md` commit that it translates, so a stale translation is easy to find.
 - Header: a centered `<h1>` with the repo name. No banner image and no ASCII-art title.
 
+## Repo settings and About
+
+Every repo uses the same settings. Apply them when you create a repo:
+
+```sh
+gh repo create zyx1121/{repo} --public --description "{the README one line}"
+gh api -X PATCH repos/zyx1121/{repo} -F allow_squash_merge=true -F allow_merge_commit=false \
+  -F allow_rebase_merge=false -F delete_branch_on_merge=true -F has_wiki=false -F has_projects=false
+```
+
+- Merge: squash only, and GitHub deletes the branch after the merge.
+- Wiki and Projects: off. Turn Projects on only for a repo that has a linked project board.
+- Description: the one line from the README, in English, with no em dash or middle dot.
+- Website: a live site only. Leave it empty when there is none, and do not point it at the Releases page.
+- Topics: 3 to 5 lowercase words. Use one type word (`self-hosted`, `claude-code-plugin`, `mcp`, `website`, `macos-app`, `cli`, `research`, `course-project`), then the main technology and the domain.
+- License: MIT for every public repo.
+
 ## Health files
 
 Defaults for every `zyx1121` repo that does not have its own:
