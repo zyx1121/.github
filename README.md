@@ -1,34 +1,65 @@
 # .github
 
-Default community health files and README templates for `zyx1121` projects.
+README template and default community health files for `zyx1121` projects.
 
-## The skeleton
+## README
 
-Every README tells the same story, in the same order:
+Every project uses [templates/README.md](templates/README.md) in English, with [README.zh-TW.md](templates/README.zh-TW.md) and [README.zh-CN.md](templates/README.zh-CN.md) next to it. [templates/blocks.md](templates/blocks.md) holds the parts that change by project type: service, mcp, plugin, web, app, cli and research.
 
+The page has two readers, so it has two halves:
+
+| Part | Reader | Sections |
+|------|--------|----------|
+| Header | both | name or banner, one line, badges, language switch |
+| Human half | people who browse GitHub | demo, a two-sentence pitch, Features, Quick start, Usage, Configuration, How it works |
+| Agent half | coding agents and LLM tools | For AI agents (a fixed YAML block), Development, License |
+
+### Content
+
+- Each section answers one question. Delete a section that has nothing to say.
+- The line under the name says what the project is and what you get, in 15 words or fewer.
+- Features: 3 to 5 bullets. Each starts with a bold verb.
+- Quick start is copy-paste, works in less than a minute, and ends with what you should see.
+- Show the real thing: a screenshot, a GIF or real terminal output. Never show a mockup.
+- No table of contents, Contributing boilerplate, acknowledgments or star-history charts. [CONTRIBUTING.md](CONTRIBUTING.md) in this repo covers every project.
+
+### Sentences
+
+The English follows [ASD-STE100](https://www.asd-ste100.org/) (Simplified Technical English), as adapted for agent-facing text by [asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill). A non-native reader or an agent must get one meaning from each sentence.
+
+- One instruction per sentence. Instructions: 20 words or fewer. Descriptions: 25 words or fewer.
+- Active voice and simple tenses: "hum sends", not "is sent" or "has been sent".
+- Use the verb, not a noun made from it: "analyze", not "perform an analysis of".
+- No phrasal verbs: "start", not "spin up". "Use instead", not "fall back to".
+- One name for one thing. Do not rotate synonyms.
+- Numbers instead of adjectives: "7 MB", not "tiny". No "simple", "fast", "powerful", "seamless" or "modern".
+- No semicolons, em dashes or middle dots (`·`). Write two sentences, or use a comma, a colon or parentheses.
+- Paragraphs: one topic, 6 sentences or fewer. Use a list for steps and options.
+
+Check a README before you commit it:
+
+```sh
+python3 scripts/ste-lint.py README.md
 ```
-logo, or a hero demo
-one-line hook: the pain or the magic, not a feature list
-badges: version, CI, license
-story: 2 or 3 sentences on why this exists
-3 verb-led bullets: what it does for you
-quickstart that runs in 60 seconds
-depth: the sections each project type needs
-community: Contributing, License, one fun line
-```
 
-## Templates
+The Chinese translations keep the same rules where they apply: short sentences, one meaning each, and no em dashes or middle dots.
 
-| Template | Use for |
-|----------|---------|
-| [README-mcp.md](templates/README-mcp.md) | MCP server packages |
-| [README-web.md](templates/README-web.md) | Web applications |
-| [README-plugin.md](templates/README-plugin.md) | Claude Code plugins / component marketplaces |
-| [README-service.md](templates/README-service.md) | Self-hosted services and systems, deployed with Docker Compose |
+### The agent half
+
+- The YAML block keeps the keys and their order from the template, so a tool can read every repo the same way. Write `none` instead of deleting a key.
+- `verify` is a command whose output proves the project works. It is not a description.
+- `secrets` says what is secret and where it lives. It never contains a value.
+- The rules for changing the code (where to build and test, conventions, traps) go in the repo's `AGENTS.md`.
+
+### Badges, translations, banner
+
+- Badges: 4 or fewer, `style=flat-square`, and every badge must resolve. Dynamic shields badges do not work on private repos, so a private repo has no badges.
+- Translations cover the human half. The agent half stays in English, and each translation links to it. Line 1 of a translation records the `README.md` commit that it translates, so a stale translation is easy to find.
+- Banner, optional: `.github/banner-light.svg` and `.github/banner-dark.svg`, 1440 by 320. `<picture>` selects the one that matches the color scheme of the reader. Without a banner, the header is a plain `<h1>`.
 
 ## Health files
 
-Defaults for every `zyx1121` repo that does not ship its own:
+Defaults for every `zyx1121` repo that does not have its own:
 
 | File | Covers |
 |------|--------|
