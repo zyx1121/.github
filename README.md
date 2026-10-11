@@ -10,7 +10,7 @@ The page has two readers, so it has two halves:
 
 | Part | Reader | Sections |
 |------|--------|----------|
-| Header | both | name or banner, one line, badges, language switch |
+| Header | both | name, one line, badges, language switch |
 | Human half | people who browse GitHub | demo, a two-sentence pitch, Features, Quick start, Usage, Configuration, How it works |
 | Agent half | coding agents and LLM tools | For AI agents (a fixed YAML block), Development, License |
 
@@ -28,11 +28,11 @@ The page has two readers, so it has two halves:
 The English follows [ASD-STE100](https://www.asd-ste100.org/) (Simplified Technical English), as adapted for agent-facing text by [asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill). A non-native reader or an agent must get one meaning from each sentence.
 
 - One instruction per sentence. Instructions: 20 words or fewer. Descriptions: 25 words or fewer.
-- Active voice and simple tenses: "hum sends", not "is sent" or "has been sent".
-- Use the verb, not a noun made from it: "analyze", not "perform an analysis of".
-- No phrasal verbs: "start", not "spin up". "Use instead", not "fall back to".
+- Active voice and simple tenses: `hum sends`, not `is sent` or `has been sent`.
+- Use the verb, not a noun made from it: `analyze`, not `perform an analysis of`.
+- No phrasal verbs: `start`, not `spin up`. `use instead`, not `fall back to`.
 - One name for one thing. Do not rotate synonyms.
-- Numbers instead of adjectives: "7 MB", not "tiny". No "simple", "fast", "powerful", "seamless" or "modern".
+- Numbers instead of adjectives: `7 MB`, not `tiny`. No `simple`, `fast`, `powerful`, `seamless` or `modern`.
 - No semicolons, em dashes or middle dots (`·`). Write two sentences, or use a comma, a colon or parentheses.
 - Paragraphs: one topic, 6 sentences or fewer. Use a list for steps and options.
 
@@ -51,11 +51,11 @@ The Chinese translations keep the same rules where they apply: short sentences, 
 - `secrets` says what is secret and where it lives. It never contains a value.
 - The rules for changing the code (where to build and test, conventions, traps) go in the repo's `AGENTS.md`.
 
-### Badges, translations, banner
+### Header, badges, translations
 
 - Badges: 4 or fewer, `style=flat-square`, and every badge must resolve. Dynamic shields badges do not work on private repos, so a private repo has no badges.
 - Translations cover the human half. The agent half stays in English, and each translation links to it. Line 1 of a translation records the `README.md` commit that it translates, so a stale translation is easy to find.
-- Banner, optional: `.github/banner-light.svg` and `.github/banner-dark.svg`, 1440 by 320. `<picture>` selects the one that matches the color scheme of the reader. Without a banner, the header is a plain `<h1>`.
+- Header: a centered `<h1>` with the repo name. No banner image and no ASCII-art title.
 
 ## Health files
 

@@ -8,13 +8,6 @@ README.zh-TW.md and README.zh-CN.md translate the sections above "For AI agents"
 
 <div align="center">
 
-<!-- Banner, optional: commit .github/banner-light.svg and .github/banner-dark.svg,
-     then delete the <h1> below. -->
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/banner-dark.svg">
-  <img alt="{name}" src=".github/banner-light.svg" width="720">
-</picture>
-
 <h1>{name}</h1>
 
 <p><strong>{What it is and what you get, in one line under 15 words.}</strong></p>

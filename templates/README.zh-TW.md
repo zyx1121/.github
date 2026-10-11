@@ -2,11 +2,6 @@
 
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/banner-dark.svg">
-  <img alt="{name}" src=".github/banner-light.svg" width="720">
-</picture>
-
 <h1>{name}</h1>
 
 <p><strong>{一句話說明它是什麼、用了會得到什麼，30 字以內。}</strong></p>
