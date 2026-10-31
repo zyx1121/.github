@@ -1,0 +1,8 @@
+name: self-alint
+
+on:
+  pull_request:
+
+jobs:
+  alint:
+    uses: ./.github/workflows/alint.yml

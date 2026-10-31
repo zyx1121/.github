@@ -1,6 +1,6 @@
 # .github
 
-README template and default community health files for `zyx1121` projects.
+README template, default community health files and shared workflows for `zyx1121` projects.
 
 ## README
 
@@ -84,3 +84,23 @@ Defaults for every `zyx1121` repo that does not have its own:
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Ground rules |
 | [ISSUE_TEMPLATE/](ISSUE_TEMPLATE/), [PULL_REQUEST_TEMPLATE.md](PULL_REQUEST_TEMPLATE.md) | Issue and PR forms |
+
+## Shared workflows
+
+| Workflow | Does |
+|------|--------|
+| [alint.yml](.github/workflows/alint.yml) | Fails a pull request whose added lines break an alint grep rule ([zyx1121/plugin](https://github.com/zyx1121/plugin) `skills/alint`) |
+
+A repo calls it with one file:
+
+```yaml
+# .github/workflows/alint.yml
+name: alint
+on:
+  pull_request:
+jobs:
+  alint:
+    uses: zyx1121/.github/.github/workflows/alint.yml@main
+    # with:
+    #   runs-on: '["self-hosted","carrel"]'
+```
