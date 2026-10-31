@@ -103,4 +103,5 @@ jobs:
     uses: zyx1121/.github/.github/workflows/alint.yml@main
     # with:
     #   runs-on: '["self-hosted","carrel"]'
+    #   container: node:22
 ```
