@@ -39,7 +39,10 @@ jobs:
       - name: Fetch the alint engine
         env:
           REF: ${{ inputs.engine-ref }}
-        run: git clone --quiet --depth 1 --branch "$REF" https://github.com/zyx1121/plugin "$RUNNER_TEMP/plugin"
+        # A self-hosted runner can keep _temp from a container job; clear it.
+        run: |
+          rm -rf "$RUNNER_TEMP/plugin"
+          git clone --quiet --depth 1 --branch "$REF" https://github.com/zyx1121/plugin "$RUNNER_TEMP/plugin"
 
       - name: Run alint
         env:
