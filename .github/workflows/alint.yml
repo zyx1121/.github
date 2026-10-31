@@ -1,0 +1,41 @@
+# Reusable: runs the alint grep rules on a pull request's added lines and
+# fails the check on any hit. Engine and shared rules come from
+# zyx1121/plugin skills/alint; a repo's own .alint/rules/ apply too.
+name: alint
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Runner as JSON, such as '"ubuntu-latest"' or '["self-hosted","carrel"]'
+        type: string
+        default: '"ubuntu-latest"'
+      engine-ref:
+        description: Ref of zyx1121/plugin to take the engine and rules from
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  alint:
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch the alint engine
+        env:
+          REF: ${{ inputs.engine-ref }}
+        run: git clone --quiet --depth 1 --branch "$REF" https://github.com/zyx1121/plugin "$RUNNER_TEMP/plugin"
+
+      - name: Run alint
+        env:
+          BASE: ${{ github.base_ref }}
+        run: node "$RUNNER_TEMP/plugin/skills/alint/scripts/alint.mjs" --base "origin/$BASE" --repo . --ci
