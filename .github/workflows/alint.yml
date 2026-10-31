@@ -44,4 +44,8 @@ jobs:
       - name: Run alint
         env:
           BASE: ${{ github.base_ref }}
-        run: node "$RUNNER_TEMP/plugin/skills/alint/scripts/alint.mjs" --base "origin/$BASE" --repo . --ci
+        # In a container the checkout belongs to another user, and git refuses
+        # it. Mark the workspace safe for this step only.
+        run: |
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
+          node "$RUNNER_TEMP/plugin/skills/alint/scripts/alint.mjs" --base "origin/$BASE" --repo . --ci
