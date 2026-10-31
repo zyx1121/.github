@@ -14,6 +14,10 @@ on:
         description: Ref of zyx1121/plugin to take the engine and rules from
         type: string
         default: main
+      container:
+        description: Image to run in, such as node:22, for a self-hosted runner whose other jobs run as root in a container. Empty runs on the host
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -21,6 +25,8 @@ permissions:
 jobs:
   alint:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
+    container:
+      image: ${{ inputs.container }}
     steps:
       - uses: actions/checkout@v5
         with:
