@@ -7,6 +7,10 @@
 #
 # Target carrel: the release (VERSION plus `files`) goes to a Carrel app,
 # where carrel-deployd runs the start script and rolls back an unhealthy one.
+#
+# Each run reports deploy.started, then deploy.live or deploy.failed, to
+# golem with the job's OIDC token, so `golem-watch <repo> <sha>` can wait for
+# it. A notice that cannot be sent never fails the deploy.
 name: ship
 
 on:
@@ -40,6 +44,10 @@ on:
         description: How long to wait for ci on main when ci has not passed these files yet
         type: number
         default: 20
+      golem:
+        description: golem origin that gets deploy notices. Empty turns them off
+        type: string
+        default: https://golem.zyx.tw
 
 permissions:
   contents: read
@@ -77,7 +85,7 @@ jobs:
           all() { for n in $names; do has "$n:$1" || return 1; done; }
           moved() { [ "$commit" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]; }
           if moved; then echo "main has moved past $commit; skipping"; exit 0; fi
-          if all "$sha"; then echo "$sha is already released"; exit 0; fi
+          if all "$sha"; then echo "$sha is already released"; echo "released=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           deadline=$((SECONDS + WAIT * 60))
           until all "$tree"; do
             runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$CI_FILE/runs?head_sha=$commit&event=push" --jq '[.workflow_runs[] | select(.status == "completed") | .conclusion]')
@@ -99,6 +107,16 @@ jobs:
           done
           echo "deploy=true" >> "$GITHUB_OUTPUT"
       - if: steps.ship.outputs.deploy == 'true'
+        name: Tell golem the deploy started
+        continue-on-error: true
+        env:
+          GOLEM: ${{ inputs.golem }}
+          BODY: ${{ format('{{"kind":"deploy.started","version":"{0}","target":"{1}/{2}/{3}"}}', steps.ship.outputs.sha, inputs.target, inputs.tenant, inputs.app) }}
+        run: &notice |
+          [ -n "$GOLEM" ] || exit 0
+          token=$(curl -sf --max-time 10 -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$GOLEM" | jq -r .value)
+          curl -sf --max-time 10 -X POST "$GOLEM/notices" -H "Authorization: Bearer $token" -H 'content-type: application/json' -d "$BODY" >/dev/null
+      - if: steps.ship.outputs.deploy == 'true'
         name: Pack the release
         env:
           FILES: ${{ inputs.files }}
@@ -114,3 +132,17 @@ jobs:
           tenant: ${{ inputs.tenant }}
           app: ${{ inputs.app }}
           artifact: ${{ runner.temp }}/release.tar.gz
+      - if: success() && (steps.ship.outputs.deploy == 'true' || steps.ship.outputs.released == 'true')
+        name: Tell golem the deploy is live
+        continue-on-error: true
+        env:
+          GOLEM: ${{ inputs.golem }}
+          BODY: ${{ format('{{"kind":"deploy.live","version":"{0}","target":"{1}/{2}/{3}"}}', steps.ship.outputs.sha, inputs.target, inputs.tenant, inputs.app) }}
+        run: *notice
+      - if: failure()
+        name: Tell golem the deploy failed
+        continue-on-error: true
+        env:
+          GOLEM: ${{ inputs.golem }}
+          BODY: ${{ format('{{"kind":"deploy.failed","version":"{0}","target":"{1}/{2}/{3}","detail":"see the run"}}', steps.ship.outputs.sha, inputs.target, inputs.tenant, inputs.app) }}
+        run: *notice
