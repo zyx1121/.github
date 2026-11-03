@@ -62,7 +62,10 @@ jobs:
           TIME: ${{ steps.tree.outputs.time }}
           EXTRA: ${{ inputs.build-args }}
           SECRET_NAMES: ${{ inputs.build-secrets }}
-          SECRETS: ${{ inputs.build-secrets != '' && toJSON(secrets) || '{}' }}
+          # Only a build that may push gets secrets: a fork's or Dependabot's
+          # pull request runs its own Dockerfile and could send them out,
+          # even where the repository hands secrets to such pull requests.
+          SECRETS: ${{ inputs.build-secrets != '' && (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && toJSON(secrets) || '{}' }}
           URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -72,6 +75,7 @@ jobs:
           done <<<"$EXTRA"
           # A secret reaches the build as a mount, never as a layer or an
           # argument. One missing (a fork's pull request) builds without it.
+          [ "$PUSH" = true ] || SECRETS='{}'
           while IFS= read -r secret; do
             [ -z "$secret" ] && continue
             value=$(jq -r --arg n "$secret" '.[$n] // empty' <<<"$SECRETS")
