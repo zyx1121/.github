@@ -7,6 +7,8 @@
 #
 # Target carrel: the release (VERSION plus `files`) goes to a Carrel app,
 # where carrel-deployd runs the start script and rolls back an unhealthy one.
+# Target land: the same release goes to land (zyx1121/land), which speaks the
+# Carrel apps protocol for our own machines; the tenant is the machine.
 #
 # Each run reports deploy.started, then deploy.live or deploy.failed, to
 # golem with the job's OIDC token, so `golem-watch <repo> <sha>` can wait for
@@ -21,15 +23,15 @@ on:
         type: string
         required: true
       target:
-        description: Where it deploys. Only carrel for now
+        description: Where it deploys, carrel or land
         type: string
         default: carrel
       tenant:
-        description: Carrel tenant
+        description: Carrel tenant, or the machine for land
         type: string
         required: true
       app:
-        description: Carrel app
+        description: App name on Carrel or land
         type: string
         required: true
       files:
@@ -126,12 +128,13 @@ jobs:
           cp $FILES "$RUNNER_TEMP/release/"
           echo "$SHA" > "$RUNNER_TEMP/release/VERSION"
           tar czf "$RUNNER_TEMP/release.tar.gz" -C "$RUNNER_TEMP/release" .
-      - if: steps.ship.outputs.deploy == 'true' && inputs.target == 'carrel'
+      - if: steps.ship.outputs.deploy == 'true' && (inputs.target == 'carrel' || inputs.target == 'land')
         uses: NYCU-WinLab/carrel-deploy@v1
         with:
           tenant: ${{ inputs.tenant }}
           app: ${{ inputs.app }}
           artifact: ${{ runner.temp }}/release.tar.gz
+          url: ${{ inputs.target == 'land' && 'https://land.zyx.tw' || 'https://carrel.winlab.tw' }}
       - if: success() && (steps.ship.outputs.deploy == 'true' || steps.ship.outputs.released == 'true')
         name: Tell golem the deploy is live
         continue-on-error: true
