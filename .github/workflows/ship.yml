@@ -7,6 +7,10 @@
 #
 # Target carrel: the release (VERSION plus `files`) goes to a Carrel app,
 # where carrel-deployd runs the start script and rolls back an unhealthy one.
+# A host without Docker takes a bundle: an image whose /release holds the
+# built files (FROM scratch). ship copies them into the release, so the start
+# script runs them in place.
+#
 # Target land: the same release goes to land (zyx1121/land), which speaks the
 # Carrel apps protocol for our own machines; the tenant is the machine.
 #
@@ -32,6 +36,10 @@ on:
         default: ""
       app:
         description: App name on Carrel or land
+        type: string
+        default: ""
+      bundle:
+        description: One of the images, whose /release goes into the release (for a host without Docker). Empty for none
         type: string
         default: ""
       files:
@@ -123,8 +131,16 @@ jobs:
         env:
           FILES: ${{ inputs.files }}
           SHA: ${{ steps.ship.outputs.sha }}
+          BUNDLE: ${{ inputs.bundle }}
         run: |
+          set -euo pipefail
           mkdir "$RUNNER_TEMP/release"
+          if [ -n "$BUNDLE" ]; then
+            docker pull --quiet "$BUNDLE:$SHA" >/dev/null
+            cid=$(docker create "$BUNDLE:$SHA" /none)
+            docker cp "$cid:/release/." "$RUNNER_TEMP/release/"
+            docker rm "$cid" >/dev/null
+          fi
           cp $FILES "$RUNNER_TEMP/release/"
           echo "$SHA" > "$RUNNER_TEMP/release/VERSION"
           tar czf "$RUNNER_TEMP/release.tar.gz" -C "$RUNNER_TEMP/release" .

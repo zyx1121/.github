@@ -120,6 +120,7 @@ A service ships only images that its ci passed, and it builds each image once. T
 5. A build that needs a secret reads it with `RUN --mount=type=secret,id=NAME,env=NAME`. The image job passes it under `secrets: build-env:` as a JSON object, each value written with `toJSON` so a multi-line value survives: `{"NAME": ${{ toJSON(secrets.NAME) }}}`. `secrets: inherit` does not cross organizations. Its value never lands in a layer, but what the build writes with it does, and `buildcache` keeps every stage: delete such files (for example `.next/cache`) in the same `RUN`. Forks and Dependabot build without secrets.
 6. ship reports `deploy.started`, then `deploy.live` or `deploy.failed`, to golem. Wait for a deploy with `golem-watch <owner/repo> <sha>` (in the golem repo): it exits 0 when the commit is live and 1 when it fails.
 7. A service on our own machines (enderchest, VM 117) uses `target: land` with `tenant: <machine>`. Link it on land first (zyx1121/land README).
+8. A host without Docker (a Bun app in an LXC) ships a bundle: `deploy/release.Dockerfile` builds `FROM scratch` with the files under `/release`, image.yml builds it in the pull request like any image, and ship gets `bundle: <that image>`. The start script then runs the files in place, for example `exec bun build/server.js`.
 
 ```yaml
 # .github/workflows/ci.yml
