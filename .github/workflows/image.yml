@@ -22,7 +22,7 @@ on:
         default: ""
     secrets:
       build-env:
-        description: Secrets the build reads, one NAME=value per line, each as RUN --mount=type=secret,id=NAME,env=NAME. secrets inherit does not cross organizations, so the caller writes them out
+        description: 'Secrets the build reads, as a JSON object of NAME: value, each as RUN --mount=type=secret,id=NAME,env=NAME. Write each value with toJSON, so a multi-line value survives. secrets inherit does not cross organizations, so the caller writes them out'
         required: false
     outputs:
       tree:
@@ -75,23 +75,25 @@ jobs:
           # A secret reaches the build as a mount, never as a layer or an
           # argument. A fork's pull request builds without them.
           [ "$PUSH" = true ] || BUILD_ENV=
-          mounted=
-          while IFS= read -r line; do
-            name=${line%%=*}
-            [ -n "$line" ] && [ "$name" != "$line" ] || continue
-            if ! [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-              echo "::error::build-env has a line whose name is not NAME=value"; exit 1
+          # Never print a name or a value: both come from the secret.
+          count=0
+          if [ -n "$BUILD_ENV" ]; then
+            if ! names=$(jq -r 'if type == "object" and all(.[]; type == "string") then keys[] else error end' <<<"$BUILD_ENV" 2>/dev/null); then
+              echo "::error::build-env is not a JSON object of strings"; exit 1
             fi
-            # Never over a variable this step or the runner already uses.
-            if [ -n "${!name+x}" ]; then
-              echo "::error::build-env name $name is already set in the build step"; exit 1
-            fi
-            export "$name=${line#*=}"
-            args+=(--secret "id=$name,env=$name")
-            mounted+=" $name"
-          done <<<"$BUILD_ENV"
-          unset BUILD_ENV line
-          echo "build secrets:${mounted:- none}"
+            while IFS= read -r name; do
+              [ -n "$name" ] || continue
+              if ! [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || [ -n "${!name+x}" ]; then
+                echo "::error::build-env entry $((count + 1)) has a name that is not usable"; exit 1
+              fi
+              export "$name=$(jq -r --arg n "$name" '.[$n]' <<<"$BUILD_ENV"; printf x)"
+              export "$name=${!name%?x}"
+              args+=(--secret "id=$name,env=$name")
+              count=$((count + 1))
+            done <<<"$names"
+          fi
+          unset BUILD_ENV names
+          echo "build secrets: $count"
           jq -c '.[]' <<<"$IMAGES" | while read -r image; do
             name=$(jq -r .name <<<"$image")
             context=$(jq -r '.context // "."' <<<"$image")
