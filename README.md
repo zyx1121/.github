@@ -117,7 +117,7 @@ A service ships only images that its ci passed, and it builds each image once. T
 2. `deploy/carrel-start.sh` reads `VERSION` (`sha-<commit>`), installs `compose.yaml` and starts the stack. It reports ready when web is healthy.
 3. `compose.yaml` runs web with `init: true`, `stop_grace_period: 3s`, and a healthcheck with `start_interval: 1s`.
 4. The app reads its commit at run time (for example from `VERSION` in `.env`), not at build time. The image is built before the merge commit exists.
-5. A build that needs a secret lists it in `build-secrets` and reads it with `RUN --mount=type=secret,id=NAME,env=NAME`; the image job then needs `secrets: inherit`. Its value never lands in a layer, but what the build writes with it does, and `buildcache` keeps every stage: delete such files (for example `.next/cache`) in the same `RUN`. Forks and Dependabot build without secrets.
+5. A build that needs a secret reads it with `RUN --mount=type=secret,id=NAME,env=NAME`. The image job passes it under `secrets: build-env:` as a JSON object, each value written with `toJSON` so a multi-line value survives: `{"NAME": ${{ toJSON(secrets.NAME) }}}`. `secrets: inherit` does not cross organizations. Its value never lands in a layer, but what the build writes with it does, and `buildcache` keeps every stage: delete such files (for example `.next/cache`) in the same `RUN`. Forks and Dependabot build without secrets.
 
 ```yaml
 # .github/workflows/ci.yml
