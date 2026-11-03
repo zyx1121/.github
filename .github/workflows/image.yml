@@ -20,6 +20,10 @@ on:
         description: Extra build arguments, one NAME=value per line. BUILD_TIME and BUILD_URL are always set
         type: string
         default: ""
+      build-secrets:
+        description: Names of repository secrets the build reads, one per line, as RUN --mount=type=secret,id=NAME,env=NAME. The caller passes secrets inherit
+        type: string
+        default: ""
     outputs:
       tree:
         description: The git tree the images were built from
@@ -57,6 +61,8 @@ jobs:
           TREE: ${{ steps.tree.outputs.tree }}
           TIME: ${{ steps.tree.outputs.time }}
           EXTRA: ${{ inputs.build-args }}
+          SECRET_NAMES: ${{ inputs.build-secrets }}
+          SECRETS: ${{ inputs.build-secrets != '' && toJSON(secrets) || '{}' }}
           URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
@@ -64,6 +70,16 @@ jobs:
           while IFS= read -r line; do
             [ -n "$line" ] && args+=(--build-arg "$line")
           done <<<"$EXTRA"
+          # A secret reaches the build as a mount, never as a layer or an
+          # argument. One missing (a fork's pull request) builds without it.
+          while IFS= read -r secret; do
+            [ -z "$secret" ] && continue
+            value=$(jq -r --arg n "$secret" '.[$n] // empty' <<<"$SECRETS")
+            [ -z "$value" ] && continue
+            export "$secret=$value"
+            args+=(--secret "id=$secret,env=$secret")
+          done <<<"$SECRET_NAMES"
+          unset SECRETS value
           jq -c '.[]' <<<"$IMAGES" | while read -r image; do
             name=$(jq -r .name <<<"$image")
             context=$(jq -r '.context // "."' <<<"$image")
