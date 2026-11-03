@@ -1,0 +1,83 @@
+# Reusable, for a repo's ci: builds its images once per commit, smoke-tests
+# them, and pushes each as candidate-<tree>. The tree is the files, not the
+# commit: a pull request checks out its merge with main, so its tree is what
+# the squash merge will have. promote.yml makes the candidates tree-<tree>
+# once every check passed, and ship.yml deploys only tree- images.
+name: image
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: 'JSON array of {"name", "context", "file"}; context and file default to . and <context>/Dockerfile'
+        type: string
+        required: true
+      smoke:
+        description: Command to run after the build, with every image loaded as <name>:ci. Empty skips it
+        type: string
+        default: ""
+      build-args:
+        description: Extra build arguments, one NAME=value per line. BUILD_TIME and BUILD_URL are always set
+        type: string
+        default: ""
+    outputs:
+      tree:
+        description: The git tree the images were built from
+        value: ${{ jobs.image.outputs.tree }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      tree: ${{ steps.tree.outputs.tree }}
+    env:
+      # A fork's or Dependabot's pull request cannot push: it builds and
+      # smoke-tests only.
+      PUSH: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: tree
+        run: |
+          echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+          echo "time=$(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build
+        env:
+          IMAGES: ${{ inputs.images }}
+          TREE: ${{ steps.tree.outputs.tree }}
+          TIME: ${{ steps.tree.outputs.time }}
+          EXTRA: ${{ inputs.build-args }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          args=(--build-arg "BUILD_TIME=$TIME" --build-arg "BUILD_URL=$URL")
+          while IFS= read -r line; do
+            [ -n "$line" ] && args+=(--build-arg "$line")
+          done <<<"$EXTRA"
+          jq -c '.[]' <<<"$IMAGES" | while read -r image; do
+            name=$(jq -r .name <<<"$image")
+            context=$(jq -r '.context // "."' <<<"$image")
+            file=$(jq -r ".file // \"$context/Dockerfile\"" <<<"$image")
+            out=(--output "type=docker,name=$name:ci")
+            cache=(--cache-from "type=registry,ref=$name:buildcache")
+            if [ "$PUSH" = true ]; then
+              out+=(--output "type=image,name=$name:candidate-$TREE,push=true")
+              cache+=(--cache-to "type=registry,ref=$name:buildcache,mode=max")
+            fi
+            echo "::group::$name"
+            docker buildx build --platform linux/amd64 -f "$file" "${args[@]}" "${cache[@]}" "${out[@]}" "$context"
+            echo "::endgroup::"
+          done
+      - if: inputs.smoke != ''
+        name: Smoke test
+        run: ${{ inputs.smoke }}

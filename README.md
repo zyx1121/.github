@@ -90,6 +90,9 @@ Defaults for every `zyx1121` repo that does not have its own:
 | Workflow | Does |
 |------|--------|
 | [alint.yml](.github/workflows/alint.yml) | Fails a pull request whose added lines break an alint grep rule ([zyx1121/plugin](https://github.com/zyx1121/plugin) `skills/alint`) |
+| [image.yml](.github/workflows/image.yml) | Builds a repo's images once per commit with a registry cache, runs its smoke test, and pushes each as `candidate-<tree>` |
+| [promote.yml](.github/workflows/promote.yml) | Makes the candidates `tree-<tree>` after every check passed |
+| [ship.yml](.github/workflows/ship.yml) | On push to main, retags the `tree-` images `sha-<commit>` and `main`, then deploys them. It never builds |
 
 A repo calls it with one file:
 
@@ -105,3 +108,64 @@ jobs:
     #   runs-on: '["self-hosted","carrel"]'
     #   container: node:22
 ```
+
+### Deploy a service
+
+A service ships only images that its ci passed, and it builds each image once. The pull request builds it, so the merge only retags and deploys it: portal went from 228 s to 42 s from merge to live. The tag `tree-<git tree>` names the files, not the commit. A pull request checks out its merge with main, so its tree is the tree the squash merge has.
+
+1. `deploy/smoke.sh` starts the stack from the `<name>:ci` images and probes it.
+2. `deploy/carrel-start.sh` reads `VERSION` (`sha-<commit>`), installs `compose.yaml` and starts the stack. It reports ready when web is healthy.
+3. `compose.yaml` runs web with `init: true`, `stop_grace_period: 3s`, and a healthcheck with `start_interval: 1s`.
+4. The app reads its commit at run time (for example from `VERSION` in `.env`), not at build time. The image is built before the merge commit exists.
+
+```yaml
+# .github/workflows/ci.yml
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # the repo's own lint, typecheck and tests
+  image:
+    uses: zyx1121/.github/.github/workflows/image.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      images: '[{"name": "ghcr.io/<owner>/<repo>"}]'
+      smoke: bash deploy/smoke.sh
+  promote:
+    needs: [check, image]
+    uses: zyx1121/.github/.github/workflows/promote.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      images: '["ghcr.io/<owner>/<repo>"]'
+```
+
+```yaml
+# .github/workflows/release.yml
+name: release
+on:
+  push:
+    branches: [main]
+jobs:
+  ship:
+    uses: zyx1121/.github/.github/workflows/ship.yml@main
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      id-token: write
+    with:
+      images: '["ghcr.io/<owner>/<repo>"]'
+      tenant: <carrel tenant>
+      app: <carrel app>
+```
+
