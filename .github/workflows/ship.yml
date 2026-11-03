@@ -1,0 +1,116 @@
+# Reusable, for a repo's release on push to main: deploys the images ci
+# passed. It never builds. A merged pull request's images are already
+# tree-<tree> (promote.yml), so it retags them sha-<commit> and main and
+# deploys at once. When ci has not passed these files yet (main moved
+# meanwhile, or a direct push), it waits for ci on main, and fails if ci
+# fails. It skips a commit that is released or that main has moved past.
+#
+# Target carrel: the release (VERSION plus `files`) goes to a Carrel app,
+# where carrel-deployd runs the start script and rolls back an unhealthy one.
+name: ship
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: JSON array of image names, or of {"name"} objects as given to image.yml
+        type: string
+        required: true
+      target:
+        description: Where it deploys. Only carrel for now
+        type: string
+        default: carrel
+      tenant:
+        description: Carrel tenant
+        type: string
+        required: true
+      app:
+        description: Carrel app
+        type: string
+        required: true
+      files:
+        description: Repo files the release carries, space separated. The start script comes first
+        type: string
+        default: deploy/carrel-start.sh compose.yaml
+      ci:
+        description: File name of the workflow that calls promote.yml
+        type: string
+        default: ci.yml
+      wait-minutes:
+        description: How long to wait for ci on main when ci has not passed these files yet
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+  id-token: write
+
+jobs:
+  ship:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ship-${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: ship
+        name: Retag the images ci passed
+        env:
+          IMAGES: ${{ inputs.images }}
+          CI_FILE: ${{ inputs.ci }}
+          WAIT: ${{ inputs.wait-minutes }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          commit=$(git rev-parse HEAD)
+          sha="sha-${commit::7}"
+          tree="tree-$(git rev-parse 'HEAD^{tree}')"
+          names=$(jq -r '.[] | if type == "string" then . else .name end' <<<"$IMAGES")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          has() { docker buildx imagetools inspect "$1" >/dev/null 2>&1; }
+          all() { for n in $names; do has "$n:$1" || return 1; done; }
+          moved() { [ "$commit" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]; }
+          if moved; then echo "main has moved past $commit; skipping"; exit 0; fi
+          if all "$sha"; then echo "$sha is already released"; exit 0; fi
+          deadline=$((SECONDS + WAIT * 60))
+          until all "$tree"; do
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$CI_FILE/runs?head_sha=$commit&event=push" --jq '[.workflow_runs[] | select(.status == "completed") | .conclusion]')
+            if [ "$(jq 'map(select(. != "success")) | length' <<<"$runs")" -gt 0 ]; then
+              echo "::error::ci did not pass $commit"; exit 1
+            fi
+            if [ "$(jq 'map(select(. == "success")) | length' <<<"$runs")" -gt 0 ]; then
+              echo "::error::ci passed $commit but $tree is missing; does ci call promote.yml?"; exit 1
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::ci has not passed $commit after $WAIT minutes"; exit 1
+            fi
+            if moved; then echo "main has moved past $commit; skipping"; exit 0; fi
+            echo "Waiting for ci on main to pass these files"
+            sleep 10
+          done
+          for n in $names; do
+            docker buildx imagetools create -t "$n:$sha" -t "$n:main" "$n:$tree"
+          done
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+      - if: steps.ship.outputs.deploy == 'true'
+        name: Pack the release
+        env:
+          FILES: ${{ inputs.files }}
+          SHA: ${{ steps.ship.outputs.sha }}
+        run: |
+          mkdir "$RUNNER_TEMP/release"
+          cp $FILES "$RUNNER_TEMP/release/"
+          echo "$SHA" > "$RUNNER_TEMP/release/VERSION"
+          tar czf "$RUNNER_TEMP/release.tar.gz" -C "$RUNNER_TEMP/release" .
+      - if: steps.ship.outputs.deploy == 'true' && inputs.target == 'carrel'
+        uses: NYCU-WinLab/carrel-deploy@v1
+        with:
+          tenant: ${{ inputs.tenant }}
+          app: ${{ inputs.app }}
+          artifact: ${{ runner.temp }}/release.tar.gz
