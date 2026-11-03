@@ -23,17 +23,17 @@ on:
         type: string
         required: true
       target:
-        description: Where it deploys, carrel or land
+        description: Where it deploys, carrel or land; none only retags
         type: string
         default: carrel
       tenant:
         description: Carrel tenant, or the machine for land
         type: string
-        required: true
+        default: ""
       app:
         description: App name on Carrel or land
         type: string
-        required: true
+        default: ""
       files:
         description: Repo files the release carries, space separated. The start script comes first
         type: string
@@ -108,7 +108,7 @@ jobs:
             docker buildx imagetools create -t "$n:$sha" -t "$n:main" "$n:$tree"
           done
           echo "deploy=true" >> "$GITHUB_OUTPUT"
-      - if: steps.ship.outputs.deploy == 'true'
+      - if: steps.ship.outputs.deploy == 'true' && inputs.target != 'none'
         name: Tell golem the deploy started
         continue-on-error: true
         env:
@@ -118,7 +118,7 @@ jobs:
           [ -n "$GOLEM" ] || exit 0
           token=$(curl -sf --max-time 10 -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$GOLEM" | jq -r .value)
           curl -sf --max-time 10 -X POST "$GOLEM/notices" -H "Authorization: Bearer $token" -H 'content-type: application/json' -d "$BODY" >/dev/null
-      - if: steps.ship.outputs.deploy == 'true'
+      - if: steps.ship.outputs.deploy == 'true' && inputs.target != 'none'
         name: Pack the release
         env:
           FILES: ${{ inputs.files }}
@@ -135,14 +135,14 @@ jobs:
           app: ${{ inputs.app }}
           artifact: ${{ runner.temp }}/release.tar.gz
           url: ${{ inputs.target == 'land' && 'https://land.zyx.tw' || 'https://carrel.winlab.tw' }}
-      - if: success() && (steps.ship.outputs.deploy == 'true' || steps.ship.outputs.released == 'true')
+      - if: success() && inputs.target != 'none' && (steps.ship.outputs.deploy == 'true' || steps.ship.outputs.released == 'true')
         name: Tell golem the deploy is live
         continue-on-error: true
         env:
           GOLEM: ${{ inputs.golem }}
           BODY: ${{ format('{{"kind":"deploy.live","version":"{0}","target":"{1}/{2}/{3}"}}', steps.ship.outputs.sha, inputs.target, inputs.tenant, inputs.app) }}
         run: *notice
-      - if: failure()
+      - if: failure() && inputs.target != 'none'
         name: Tell golem the deploy failed
         continue-on-error: true
         env:
