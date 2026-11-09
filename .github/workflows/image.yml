@@ -94,7 +94,10 @@ jobs:
           fi
           unset BUILD_ENV names
           echo "build secrets: $count"
-          jq -c '.[]' <<<"$IMAGES" | while read -r image; do
+          # Build the images side by side; each log prints as one group.
+          logs=$(mktemp -d); pids=(); names=()
+          i=0
+          while read -r image; do
             name=$(jq -r .name <<<"$image")
             context=$(jq -r '.context // "."' <<<"$image")
             file=$(jq -r ".file // \"$context/Dockerfile\"" <<<"$image")
@@ -104,10 +107,18 @@ jobs:
               out+=(--output "type=image,name=$name:candidate-$TREE,push=true")
               cache+=(--cache-to "type=registry,ref=$name:buildcache,mode=max")
             fi
-            echo "::group::$name"
-            docker buildx build --platform linux/amd64 -f "$file" "${args[@]}" "${cache[@]}" "${out[@]}" "$context"
+            docker buildx build --platform linux/amd64 -f "$file" "${args[@]}" "${cache[@]}" "${out[@]}" "$context" </dev/null >"$logs/$i.log" 2>&1 &
+            pids+=($!); names+=("$name"); i=$((i + 1))
+          done < <(jq -c '.[]' <<<"$IMAGES")
+          failed=0
+          for j in "${!pids[@]}"; do
+            if wait "${pids[$j]}"; then status=ok; else status=failed; failed=1; fi
+            echo "::group::${names[$j]} ($status)"
+            cat "$logs/$j.log"
             echo "::endgroup::"
+            [ "$status" = ok ] || echo "::error::build failed: ${names[$j]}"
           done
+          exit "$failed"
       - if: inputs.smoke != ''
         name: Smoke test
         run: ${{ inputs.smoke }}
