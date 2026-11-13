@@ -4,6 +4,8 @@
 # deploys at once. When ci has not passed these files yet (main moved
 # meanwhile, or a direct push), it waits for ci on main, and fails if ci
 # fails. It skips a commit that is released or that main has moved past.
+# Rerunning the job deploys a released commit again, for a deploy that failed
+# on the machine after the images were retagged.
 #
 # Target carrel: the release (VERSION plus `files`) goes to a Carrel app,
 # where carrel-deployd runs the start script and rolls back an unhealthy one.
@@ -84,6 +86,7 @@ jobs:
           CI_FILE: ${{ inputs.ci }}
           WAIT: ${{ inputs.wait-minutes }}
           GH_TOKEN: ${{ github.token }}
+          ATTEMPT: ${{ github.run_attempt }}
         run: |
           set -euo pipefail
           commit=$(git rev-parse HEAD)
@@ -95,7 +98,11 @@ jobs:
           all() { for n in $names; do has "$n:$1" || return 1; done; }
           moved() { [ "$commit" != "$(git ls-remote origin refs/heads/main | cut -f1)" ]; }
           if moved; then echo "main has moved past $commit; skipping"; exit 0; fi
-          if all "$sha"; then echo "$sha is already released"; echo "released=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if all "$sha"; then
+            # A rerun of this job means the first deploy failed after the retag: deploy again.
+            if [ "$ATTEMPT" -gt 1 ]; then echo "$sha is tagged; a rerun deploys it again"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            echo "$sha is already released"; echo "released=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           deadline=$((SECONDS + WAIT * 60))
           until all "$tree"; do
             runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$CI_FILE/runs?head_sha=$commit&event=push" --jq '[.workflow_runs[] | select(.status == "completed") | .conclusion]')
