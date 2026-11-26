@@ -1,5 +1,6 @@
-# Reusable: runs the alint grep rules on a pull request's added lines and
-# fails the check on any hit. Engine and shared rules come from
+# Reusable: runs the alint grep rules on a pull request's added lines, then
+# the model rules through Claude Haiku when the caller passes
+# ANTHROPIC_API_KEY (secrets: inherit), and fails the check on any hit. Engine and shared rules come from
 # zyx1121/plugin skills/alint; a repo's own .alint/rules/ apply too.
 name: alint
 
@@ -18,6 +19,10 @@ on:
         description: Image to run in, such as node:22, for a self-hosted runner whose other jobs run as root in a container. Empty runs on the host
         type: string
         default: ""
+    secrets:
+      ANTHROPIC_API_KEY:
+        description: Key for the model rules. Without it they are skipped with a notice
+        required: false
 
 permissions:
   contents: read
@@ -52,3 +57,13 @@ jobs:
         run: |
           export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
           node "$RUNNER_TEMP/plugin/skills/alint/scripts/alint.mjs" --base "origin/$BASE" --repo . --ci
+
+      - name: Run alint model rules
+        # Runs even when the grep rules failed, so one push shows both.
+        if: ${{ !cancelled() }}
+        env:
+          BASE: ${{ github.base_ref }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
+          node "$RUNNER_TEMP/plugin/skills/alint/scripts/alint-model.mjs" --base "origin/$BASE" --repo .
