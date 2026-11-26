@@ -89,7 +89,7 @@ Defaults for every `zyx1121` repo that does not have its own:
 
 | Workflow | Does |
 |------|--------|
-| [alint.yml](.github/workflows/alint.yml) | Fails a pull request whose added lines break an alint grep rule ([zyx1121/plugin](https://github.com/zyx1121/plugin) `skills/alint`) |
+| [alint.yml](.github/workflows/alint.yml) | Fails a pull request whose added lines break an alint grep rule, or a model rule when the repo has the `ANTHROPIC_API_KEY` secret ([zyx1121/plugin](https://github.com/zyx1121/plugin) `skills/alint`) |
 | [image.yml](.github/workflows/image.yml) | Builds a repo's images once per commit with a registry cache, runs its smoke test, and pushes each as `candidate-<tree>` |
 | [promote.yml](.github/workflows/promote.yml) | Makes the candidates `tree-<tree>` after every check passed |
 | [ship.yml](.github/workflows/ship.yml) | On push to main, retags the `tree-` images `sha-<commit>` and `main`, then deploys them. It never builds |
@@ -104,6 +104,10 @@ on:
 jobs:
   alint:
     uses: zyx1121/.github/.github/workflows/alint.yml@main
+    # Pass the key by name: `secrets: inherit` does not cross accounts, so an
+    # org repo calling this zyx1121 workflow would get nothing.
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     # with:
     #   runs-on: '["self-hosted","carrel"]'
     #   container: node:22
