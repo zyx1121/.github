@@ -104,7 +104,10 @@ on:
 jobs:
   alint:
     uses: zyx1121/.github/.github/workflows/alint.yml@main
-    secrets: inherit
+    # Pass the key by name: `secrets: inherit` does not cross accounts, so an
+    # org repo calling this zyx1121 workflow would get nothing.
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     # with:
     #   runs-on: '["self-hosted","carrel"]'
     #   container: node:22

@@ -1,6 +1,7 @@
 # Reusable: runs the alint grep rules on a pull request's added lines, then
 # the model rules through Claude Haiku when the caller passes
-# ANTHROPIC_API_KEY (secrets: inherit), and fails the check on any hit. Engine and shared rules come from
+# ANTHROPIC_API_KEY, and fails the check on any hit or on a model check that
+# could not run. Engine and shared rules come from
 # zyx1121/plugin skills/alint; a repo's own .alint/rules/ apply too.
 name: alint
 
@@ -30,6 +31,7 @@ permissions:
 jobs:
   alint:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
+    timeout-minutes: 15
     container:
       image: ${{ inputs.container }}
     steps:
